@@ -2,3 +2,8 @@ cscope.files
 cscope.out
 TAGS
 tags
+src/threads/Make.vars
+src/utils/Makefile
+src/utils/Pintos.pm
+src/utils/pintos
+src/utils/pintos-gdb
