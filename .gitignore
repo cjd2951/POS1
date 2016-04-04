@@ -1,0 +1,7 @@
+/src/utils/Makefile~
+/src/threads/Make.vars~
+src/threads/Make.vars
+src/utils/Makefile
+src/utils/Pintos.pm
+src/utils/pintos
+src/utils/pintos-gdb
