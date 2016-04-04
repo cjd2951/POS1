@@ -1,3 +1,7 @@
 setitimer-helper
 squish-pty
 squish-unix
+Makefile
+Pintos.pm
+pintos
+pintos-gdb
