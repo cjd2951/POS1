@@ -194,6 +194,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
   struct thread *cur;
 
   ASSERT (intr_get_level () == INTR_OFF);
+  ticks++;
+  thread_tick ();
 
   for (e = list_begin (&thread_sleep_list); e != list_end (&thread_sleep_list);
        e = list_next (e))
@@ -205,8 +207,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
      }
   }
 
-  ticks++;
-  thread_tick ();
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
