@@ -36,6 +36,7 @@ struct list thread_sleep_list;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
+//add a comment for commit
 void
 timer_init (void) 
 {

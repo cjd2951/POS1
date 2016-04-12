@@ -11,3 +11,10 @@ src/utils/Makefile
 src/utils/Pintos.pm
 src/utils/pintos
 src/utils/pintos-gdb
+.idea/.name
+.idea/POS1.iml
+.idea/encodings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml
