@@ -80,6 +80,7 @@ bool my_less_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux){
    /* Compare the wait_until_ticks attribute of each thread struct*/
+   int64_t a_ticks = 
    if(
 
 }
