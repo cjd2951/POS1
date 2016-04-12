@@ -44,7 +44,7 @@ timer_init (void)
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 
   /** ADDED CODE HERE **/
-  list_init(&thread_sleep_list); /* Initialize the sleep_list */
+  list_init(&thread_sleep_list); /* Initialize the sleep list */
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -108,22 +108,11 @@ timer_sleep (int64_t ticks)
   old_level = intr_disable(); /* save old INTR level, and disable INTR */
   struct thread *cur = thread_current() /** grab the timer thread **/
   cur->wait_until_ticks = (start + ticks); /** Set the correct value for wait_until_ticks **/
-  /** TODO ****Put this threads element into the thread_sleep_list **/
-  list_insert_ordered (&thread_sleep_list, &cur->sleeplistelem, list_less_func *less, NULL)
-  /** TODO use a semaphore to wake the thread from thread_sleep_list **/
-  thread_block()  /** block the timer thread -> this sets status to THREAD_BLOCKED and then calls schedule()**/  
+  /** Put this threads element into the thread_sleep_list **/
+  /** Lets use insertion "on the back" for ease. **/
+  list_push_back(&thread_sleep_list, &cur->sleeplistelem);
+  thread_block();  //block this thread that was just put on the thread_sleep_list
   intr_set_level (old_level); /* reenable INTR level when we came in here */
-
-
-  /*while (timer_elapsed (start) < ticks)
-    /* this line does constant checks against the timer to see if
-     * the time period has expired yet - this is crappy busy wait */
-  /*
-    thread_yield ();
-  */
-}
-
-bool my_less_func (...){
 }
 
 
@@ -196,14 +185,28 @@ timer_print_stats (void)
 {
   printf ("Timer: %"PRId64" ticks\n", timer_ticks ());
 }
-
+
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
+  struct list_elem *e;
+  struct thread *cur;
+
+  ASSERT (intr_get_level () == INTR_OFF);
+
+  for (e = list_begin (&thread_sleep_list); e != list_end (&thread_sleep_list);
+       e = list_next (e))
+  {
+     cur = list_entry (e, struct thread, sleep_list_elem);
+     if(cur->wait_until_ticks <= ticks){
+        list_remove(e);
+        thread_unblock(cur);
+     }
+  }
+
   ticks++;
   thread_tick ();
-  /** TODO ** Add code here 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -76,11 +76,11 @@ static tid_t allocate_tid (void);
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or
    false if A is greater than or equal to B. */
-bool my_less_func (const struct list_elem *a,
+/*bool my_less_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux){
    /* Compare the wait_until_ticks attribute of each thread struct*/
-   struct thread *a_thread = list_entry (a_thread, struct thread, sleeplistelem); //this is not right
+/*   struct thread *a_thread = list_entry (a_thread, struct thread, sleeplistelem); //this is not right
    int64_t a_ticks = a_thread->wait_until_ticks;
    int64_t b_ticks = b_thread->wait_until_ticks;
    (if a_ticks < b_ticks){
@@ -90,7 +90,7 @@ bool my_less_func (const struct list_elem *a,
       return false;
    }
 }
-
+*/
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
