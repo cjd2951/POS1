@@ -71,6 +71,20 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+/** NEW CODE **/
+/* Implement our own list_less_func() function */
+/* Compares the value of two list elements A and B, given
+   auxiliary data AUX.  Returns true if A is less than B, or
+   false if A is greater than or equal to B. */
+bool my_less_func (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux){
+   /* Compare the wait_until_ticks attribute of each thread struct*/
+   if(
+
+}
+
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -92,6 +106,8 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  /* NEW CODE */
+  list_init (&thread_sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -493,7 +509,7 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    return list_entry(list_pop_front(&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -559,6 +575,10 @@ schedule (void)
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
+ 
+  /** NEW CODE
+  if (cur->status == THREAD_BLOCKED)
+  **/
 
   if (cur != next)
     prev = switch_threads (cur, next);

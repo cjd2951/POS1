@@ -9,7 +9,7 @@
 #include "threads/thread.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
-
+/* TIMER_FREQ is set in the timer.h file */
 #if TIMER_FREQ < 19
 #error 8254 timer requires TIMER_FREQ >= 19
 #endif
@@ -30,6 +30,10 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+/* ADDED CODE HERE
+ * thread_sleep_list is the list of waiting threads */
+struct list thread_sleep_list;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -37,6 +41,9 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+
+  /** ADDED CODE HERE **/
+  list_init(&thread_sleep_list); /* Initialize the sleep_list */
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -90,11 +97,34 @@ void
 timer_sleep (int64_t ticks) 
 {
   int64_t start = timer_ticks ();
+  /* this line grabs the number of ticks since the system booted */
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
+  /* Interrupts must be turned on, or this assert fails */
+
+  /** NEW CODE **/
+  enum intr_level old_level; /* following convention */
+  old_level = intr_disable(); /* save old INTR level, and disable INTR */
+  struct thread *cur = thread_current() /** grab the timer thread **/
+  cur->wait_until_ticks = (start + ticks); /** Set the correct value for wait_until_ticks **/
+  /** TODO ****Put this threads element into the thread_sleep_list **/
+  list_insert_ordered (&thread_sleep_list, &cur->sleeplistelem, list_less_func *less, NULL)
+  /** TODO use a semaphore to wake the thread from thread_sleep_list **/
+  thread_block()  /** block the timer thread -> this sets status to THREAD_BLOCKED and then calls schedule()**/  
+  intr_set_level (old_level); /* reenable INTR level when we came in here */
+
+
+  /*while (timer_elapsed (start) < ticks)
+    /* this line does constant checks against the timer to see if
+     * the time period has expired yet - this is crappy busy wait */
+  /*
     thread_yield ();
+  */
 }
+
+bool my_less_func (...){
+}
+
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -172,6 +202,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  /** TODO ** Add code here 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

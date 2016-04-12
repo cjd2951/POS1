@@ -116,7 +116,8 @@ list_prev (struct list_elem *elem)
   return elem->prev;
 }
 
-/* Returns LIST's head.
+/* Name should be: list_reverse_end (the 'reverse' end is the head)
+   Returns LIST's head.
 
    list_rend() is often used in iterating through a list in
    reverse order, from back to front.  Here's typical usage,
@@ -441,7 +442,10 @@ list_sort (struct list *list, list_less_func *less, void *aux)
 
 /* Inserts ELEM in the proper position in LIST, which must be
    sorted according to LESS given auxiliary data AUX.
-   Runs in O(n) average case in the number of elements in LIST. */
+   Runs in O(n) average case in the number of elements in LIST. 
+   
+   inserts items in order, where lower values of AUX appear at the 
+   beginning of the list Head->1->2->3->10 etc. */
 void
 list_insert_ordered (struct list *list, struct list_elem *elem,
                      list_less_func *less, void *aux)

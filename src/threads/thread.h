@@ -90,6 +90,10 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+    /* NEW CODE */
+    struct list_elem sleeplistelem;	/* NEW CODE: List element for sleep list*/
+    int64_t wait_until_ticks;   	/* call thread_unblock when wait_until_ticks == ticks in timer.c */
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -137,5 +141,10 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/** NEW CODE **/
+list_less_func my_less_func (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux);
 
 #endif /* threads/thread.h */
