@@ -93,7 +93,6 @@ struct thread
     /* NEW CODE */
     struct list_elem sleeplistelem;	/* NEW CODE: List element for sleep list*/
     int64_t wait_until_ticks;   	/* call thread_unblock when wait_until_ticks == ticks in timer.c */
-//    struct semaphore sleep_sema		/* sema to be used 
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */

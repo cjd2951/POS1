@@ -106,7 +106,7 @@ timer_sleep (int64_t ticks)
   /** NEW CODE **/
   enum intr_level old_level; /* following convention */
   old_level = intr_disable(); /* save old INTR level, and disable INTR */
-  struct thread *cur = thread_current() /** grab the timer thread **/
+  struct thread *cur = thread_current(); /** grab the timer thread **/
   cur->wait_until_ticks = (start + ticks); /** Set the correct value for wait_until_ticks **/
   /** Put this threads element into the thread_sleep_list **/
   /** Lets use insertion "on the back" for ease. **/
@@ -198,7 +198,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
   for (e = list_begin (&thread_sleep_list); e != list_end (&thread_sleep_list);
        e = list_next (e))
   {
-     cur = list_entry (e, struct thread, sleep_list_elem);
+     cur = list_entry (e, struct thread, sleeplistelem);
      if(cur->wait_until_ticks <= ticks){
         list_remove(e);
         thread_unblock(cur);
