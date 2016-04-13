@@ -363,6 +363,9 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
+  if(thread_current()->priority < thread_current()->donated_priority){
+    return thread_current()->donated_priority;
+  }
   return thread_current ()->priority;
 }
 
