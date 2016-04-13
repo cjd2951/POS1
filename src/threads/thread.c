@@ -361,13 +361,15 @@ thread_set_priority (int new_priority)
 {
   /** NEW CODE **/
   //Set the threads priority to the new_priority
+  struct thread *thread_a;
+  struct list_elem *e;
   struct thread *cur = thread_current();
   cur->priority = new_priority;
   //check who should be running: if the priority of this thread (cur) is lower than the priority of any of the 
   // other threads on the ready list, cur needs to thread_yield().
   //This will require iterating through the ready_list, and finding the current highest priority thread
   for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)){
-     thread_a = list_entry (e, struct thread, listelem);
+     thread_a = list_entry (e, struct thread, elem);
      if(cur->priority <= thread_a->priority){
         thread_yield();
      }
