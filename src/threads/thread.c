@@ -353,10 +353,28 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
+/* void thread_set_priority (int new_priority) [Function]
+Sets the current thread’s priority to new priority. If the current thread no longer has
+the highest priority, yields. */
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  /** NEW CODE **/
+  //Set the threads priority to the new_priority
+  struct thread *cur = thread_current();
+  cur->priority = new_priority;
+  //check who should be running: if the priority of this thread (cur) is lower than the priority of any of the 
+  // other threads on the ready list, cur needs to thread_yield().
+  //This will require iterating through the ready_list, and finding the current highest priority thread
+  for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)){
+     thread_a = list_entry (e, struct thread, listelem);
+     if(cur->priority <= thread_a->priority){
+        thread_yield();
+     }
+     
+  }
+  /** EXISTING CODE **/
+  //thread_current ()->priority = new_priority;
 }
 
 /* Returns the current thread's priority. */

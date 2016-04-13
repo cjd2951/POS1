@@ -93,7 +93,7 @@ struct thread
     /* NEW CODE */
     struct list_elem sleeplistelem;	/* NEW CODE: List element for sleep list*/
     int64_t wait_until_ticks;   	/* call thread_unblock when wait_until_ticks == ticks in timer.c */
-    int original_priority;		/* This attribute will store the original priority, during priority donation */
+    int donated_priority;		/* This attribute will store the highest donated priority, so far */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
