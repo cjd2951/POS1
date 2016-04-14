@@ -534,10 +534,23 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  if (list_empty (&ready_list))
+  if (list_empty (&ready_list)) {
     return idle_thread;
-  else
-    return list_entry(list_pop_front(&ready_list), struct thread, elem);
+  }else {
+    struct thread *thread_a;
+    struct list_elem *e;
+    struct thread *currentHighest = list_entry(list_begin(&ready_list),
+    struct thread, elem);
+    for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
+      thread_a = list_entry(e,struct thread, elem);
+      if (currentHighest->priority <= thread_a->priority) {
+        currentHighest = thread_a;
+      }
+
+    }
+    list_remove(&currentHighest->elem);
+    return currentHighest;
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page
