@@ -616,10 +616,6 @@ schedule (void)
   ASSERT (intr_get_level () == INTR_OFF);
   ASSERT (cur->status != THREAD_RUNNING);
   ASSERT (is_thread (next));
- 
-  /** NEW CODE
-  if (cur->status == THREAD_BLOCKED)
-  **/
 
   if (cur != next)
     prev = switch_threads (cur, next);
