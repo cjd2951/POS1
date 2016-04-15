@@ -79,8 +79,8 @@ static tid_t allocate_tid (void);
 /*bool my_less_func (const struct list_elem *a,
                              const struct list_elem *b,
                              void *aux){
-   /* Compare the wait_until_ticks attribute of each thread struct*/
-/*   struct thread *a_thread = list_entry (a_thread, struct thread, sleeplistelem); //this is not right
+Compare the wait_until_ticks attribute of each thread struct
+   struct thread *a_thread = list_entry (a_thread, struct thread, sleeplistelem); //this is not right
    int64_t a_ticks = a_thread->wait_until_ticks;
    int64_t b_ticks = b_thread->wait_until_ticks;
    (if a_ticks < b_ticks){
@@ -221,6 +221,18 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  //** NEW CODE **//
+  // If the new thread that was just created has priority > priority of currently running thread - call yield after block.
+  struct list_elem *e;
+  enum intr_level old_level;
+
+  struct thread *cur = thread_current();
+  if(cur->priority <= t->priority){
+     old_level = intr_disable ();
+     thread_yield();
+     intr_set_level (old_level);
+     }
 
   return tid;
 }
@@ -366,7 +378,7 @@ thread_set_priority (int new_priority)
   struct thread *cur = thread_current();
   cur->priority = new_priority;
   //check who should be running: if the priority of this thread (cur) is lower than the priority of any of the 
-  // other threads on the ready list, cur needs to thread_yield().
+  //other threads on the ready list, cur needs to thread_yield().
   //This will require iterating through the ready_list, and finding the current highest priority thread
   for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)){
      thread_a = list_entry (e, struct thread, elem);
