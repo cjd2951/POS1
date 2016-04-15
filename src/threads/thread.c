@@ -71,27 +71,6 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
-/** NEW CODE **/
-/* Implement our own list_less_func() function, as defined in list.h */
-/* Compares the value of two list elements A and B, given
-   auxiliary data AUX.  Returns true if A is less than B, or
-   false if A is greater than or equal to B. */
-/*bool my_less_func (const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux){
-Compare the wait_until_ticks attribute of each thread struct
-   struct thread *a_thread = list_entry (a_thread, struct thread, sleeplistelem); //this is not right
-   int64_t a_ticks = a_thread->wait_until_ticks;
-   int64_t b_ticks = b_thread->wait_until_ticks;
-   (if a_ticks < b_ticks){
-      return true;
-   }
-   else{
-      return false;
-   }
-}
-*/
-
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -222,18 +201,6 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  //** NEW CODE **//
-  // If the new thread that was just created has priority > priority of currently running thread - call yield after block.
-  struct list_elem *e;
-  enum intr_level old_level;
-
-  struct thread *cur = thread_current();
-  if(cur->priority <= t->priority){
-     old_level = intr_disable ();
-     thread_yield();
-     intr_set_level (old_level);
-     }
-
   return tid;
 }
 
@@ -270,7 +237,9 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+//  list_push_back (&ready_list, &t->elem);
+  //NEW CODE
+  list_insert_ordered(&ready_list, &t->elem, sort_by_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -341,7 +310,9 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    //list_push_back (&ready_list, &cur->elem);
+    //NEW CODE
+    list_insert_ordered(&ready_list, &cur->elem, sort_by_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -371,33 +342,13 @@ the highest priority, yields. */
 void
 thread_set_priority (int new_priority) 
 {
-  /** NEW CODE **/
-  //Set the threads priority to the new_priority
-  struct thread *thread_a;
-  struct list_elem *e;
-  struct thread *cur = thread_current();
-  cur->priority = new_priority;
-  //check who should be running: if the priority of this thread (cur) is lower than the priority of any of the 
-  //other threads on the ready list, cur needs to thread_yield().
-  //This will require iterating through the ready_list, and finding the current highest priority thread
-  for (e = list_begin (&ready_list); e != list_end (&ready_list); e = list_next (e)){
-     thread_a = list_entry (e, struct thread, elem);
-     if(cur->priority <= thread_a->priority){
-        thread_yield();
-     }
-     
-  }
-  /** EXISTING CODE **/
-  //thread_current ()->priority = new_priority;
+  thread_current ()->priority = new_priority;
 }
 
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
 {
-  if(thread_current()->priority < thread_current()->donated_priority){
-    return thread_current()->donated_priority;
-  }
   return thread_current ()->priority;
 }
 
@@ -647,7 +598,23 @@ allocate_tid (void)
 
   return tid;
 }
-
+
+/** NEW CODE **/
+//This is a sort function to be used with in-order insertion for priority
+//returns 'true' if a > b, else returns 'false'
+bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+  struct thread *t1 = list_entry(a, struct thread, elem);
+  struct thread *t2 = list_entry(b, struct thread, elem);
+  if(t1->priority > t2->priority){
+    return true;
+  }
+  else{
+    return false;
+  }
+}
+
+
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
