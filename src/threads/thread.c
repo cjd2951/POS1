@@ -237,7 +237,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-//  list_push_back (&ready_list, &t->elem);
+//list_push_back (&ready_list, &t->elem);
   //NEW CODE
   list_insert_ordered(&ready_list, &t->elem, sort_by_priority, NULL);
   t->status = THREAD_READY;
@@ -342,7 +342,18 @@ the highest priority, yields. */
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  //thread_current ()->priority = new_priority;
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
+  struct list_elem *e = list_begin(&ready_list);//grab the front of the ready list
+  struct thread *t = list_entry(e, struct thread, elem);//convert to the thread struct
+  struct thread *cur = thread_current();//grab thread changing priority
+  cur->priority = new_priority;  //Set new priority
+  intr_set_level (old_level); //Interrupts Enabled
+  if(cur->priority <= t->priority)
+  {
+     thread_yield();
+  }        
 }
 
 /* Returns the current thread's priority. */
@@ -594,6 +605,8 @@ allocate_tid (void)
 //returns 'true' if a > b, else returns 'false'
 bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux)
 {
+  //convert the 2 list elements to threads using the macro defined in thread.h
+  //compare, and return true or false
   struct thread *t1 = list_entry(a, struct thread, elem);
   struct thread *t2 = list_entry(b, struct thread, elem);
   if(t1->priority > t2->priority){
