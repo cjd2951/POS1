@@ -500,19 +500,9 @@ next_thread_to_run (void)
   if (list_empty (&ready_list)) {
     return idle_thread;
   }else {
-    struct thread *thread_a;
-    struct list_elem *e;
-    struct thread *currentHighest = list_entry(list_begin(&ready_list),
-    struct thread, elem);
-    for (e = list_begin(&ready_list); e != list_end(&ready_list); e = list_next(e)) {
-      thread_a = list_entry(e,struct thread, elem);
-      if (currentHighest->priority <= thread_a->priority) {
-        currentHighest = thread_a;
-      }
-
-    }
-    list_remove(&currentHighest->elem);
-    return currentHighest;
+    //next thread to run is on the front of the ready list
+    //because the ready list is in priority order
+    return list_entry(list_pop_front(&ready_list), struct thread, elem);
   }
 }
 
