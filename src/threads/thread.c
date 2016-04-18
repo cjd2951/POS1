@@ -11,6 +11,9 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
+#include "thread.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -70,6 +73,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+int load_average;
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -365,35 +369,39 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice)
 {
-  /* Not yet implemented. */
+  thread_current()->nice = new_nice;
+
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  int temp_load_average = float_to_int_nearest_round(multi_float_and_int(load_average,100));
+  return temp_load_average;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  int temp_recent_cpu = float_to_int_nearest_round(multi_float_and_int(thread_current()->recent_cpu,100));
+  return temp_recent_cpu;
 }
 
+
+int calculate_recent_cpu(struct thread *cur_thread){
+  int temp_recent_cpu = add_float_and_int(multi_floats(divide_floats((multi_float_and_int(load_average,2)),(add_float_and_int(multi_float_and_int(load_average,2), 1))), cur_thread->recent_cpu), cur_thread->nice);
+}
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
