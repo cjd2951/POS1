@@ -12,7 +12,6 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "threads/fixed-point.h"
-#include "thread.h"
 
 #ifdef USERPROG
 #include "userprog/process.h"
@@ -102,6 +101,9 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  initial_thread->recent_cpu = 0;
+  load_average = 0;
+  initial_thread->nice = 0;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -141,6 +143,9 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+
+
 }
 
 /* Prints thread statistics. */
@@ -305,7 +310,7 @@ thread_exit (void)
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 void
-thread_yield (void) 
+thread_yield (void)
 {
   struct thread *cur = thread_current ();
   enum intr_level old_level;
@@ -364,29 +369,47 @@ thread_set_priority (int new_priority)
 int
 thread_get_priority (void) 
 {
-  return thread_current ()->priority;
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
+  int temp_priority = thread_current ()->priority;
+  intr_set_level(old_level);
+  return temp_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int new_nice)
 {
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
   thread_current()->nice = new_nice;
-
+  recalculate_priority(thread_current());
+  struct thread *front = list_entry(list_begin(&ready_list), struct thread, elem);
+  if(thread_current()->priority <= front->priority){
+    thread_yield();
+  }
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  return thread_current()->nice;
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
+  int temp_nice = thread_current()->nice;
+  intr_set_level(old_level);
+  return temp_nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
   int temp_load_average = float_to_int_nearest_round(multi_float_and_int(load_average,100));
+  intr_set_level(old_level);
   return temp_load_average;
 }
 
@@ -394,13 +417,40 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void) 
 {
+  enum intr_level old_level;
+  old_level = intr_disable(); //Interrupts disabled
   int temp_recent_cpu = float_to_int_nearest_round(multi_float_and_int(thread_current()->recent_cpu,100));
+  intr_set_level(old_level);
   return temp_recent_cpu;
 }
 
 
-int calculate_recent_cpu(struct thread *cur_thread){
+void calculate_recent_cpu(struct thread *cur_thread, void* aux UNUSED){
   int temp_recent_cpu = add_float_and_int(multi_floats(divide_floats((multi_float_and_int(load_average,2)),(add_float_and_int(multi_float_and_int(load_average,2), 1))), cur_thread->recent_cpu), cur_thread->nice);
+  cur_thread->recent_cpu = temp_recent_cpu;
+}
+
+void recalculate_priority(struct thread *cur_thread){
+  int temp_priority = sub_floats(int_to_float(PRI_MAX), sub_floats(divide_float_and_int(cur_thread->recent_cpu,4),(cur_thread->nice * 2)));
+  cur_thread->priority = float_to_int_nearest_round(temp_priority);
+  if(cur_thread->priority < PRI_MIN){
+    cur_thread->priority = PRI_MIN;
+  }
+  if(cur_thread->priority > PRI_MAX){
+    cur_thread->priority = PRI_MAX;
+  }
+}
+
+void calculate_load_average(void){
+  int ready_list_size = list_size(&ready_list);
+  if(thread_current() != idle_thread){
+    ready_list_size++;
+  }
+  int first_frac = float_to_int_nearest_round(divide_floats(int_to_float(59),int_to_float(60)));
+  int second_frac = float_to_int_nearest_round(divide_floats(int_to_float(1),int_to_float(60)));
+  int temp_load_average = add_floats(multi_floats(int_to_float(first_frac),load_average),multi_floats(int_to_float(second_frac),int_to_float(ready_list_size)));
+  load_average = temp_load_average;
+
 }
 /* Idle thread.  Executes when no other thread is ready to run.
 
@@ -489,6 +539,8 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->recent_cpu = 0;
+  t->nice = thread_current()->nice;
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -611,7 +663,7 @@ allocate_tid (void)
 /** NEW CODE **/
 //This is a sort function to be used with in-order insertion for priority
 //returns 'true' if a > b, else returns 'false'
-bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux)
+bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   //convert the 2 list elements to threads using the macro defined in thread.h
   //compare, and return true or false

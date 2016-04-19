@@ -146,6 +146,10 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+void calculate_recent_cpu(struct thread *cur_thread, void *aux);
+void recalculate_priority(struct thread *cur_thread);
+void calculate_load_average(void);
+
 /** NEW CODE **/
 bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
 
