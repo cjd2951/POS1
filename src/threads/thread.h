@@ -24,6 +24,8 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+#define NICE_DEFAULT 0
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -149,6 +151,9 @@ int thread_get_load_avg (void);
 void calculate_recent_cpu(struct thread *cur_thread, void *aux);
 void recalculate_priority(struct thread *cur_thread);
 void calculate_load_average(void);
+void recent_cpu_increment(void);
+void calculate_recent_for_all(void);
+void recalc_current_prior(void);
 
 /** NEW CODE **/
 bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux);

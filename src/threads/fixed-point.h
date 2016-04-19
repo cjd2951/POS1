@@ -3,64 +3,26 @@
 
 #define f (1<<14)
 
-static int int_to_float(int n);
-static int float_to_int_zero_round(int x);
-static int float_to_int_nearest_round(int x);
-static int add_floats(int x, int y);
-static int sub_floats(int x, int y);
-static int add_float_and_int(int x, int n);
-static int sub_float_and_int(int x, int n);
-static int multi_floats(int x, int y);
-static int multi_float_and_int(int x, int n);
-static int divide_floats(int x, int y);
-static int divide_float_and_int(int x, int n);
+#define int_to_float(n) (n)*(f)
 
-static int int_to_float(int n){
-    return n*f;
-}
+#define float_to_int_zero_round(x) (x)/(f)
 
-static int float_to_int_zero_round(int x){
-    return x/f;
-}
+#define float_to_int_nearest_round(x) ((x) >= 0 ? ((x)+(f)/2)/(f):((x)-(f)/2)/(f))
 
-static int float_to_int_nearest_round(int x){
-    if(x >= 0){
-        return (x+f/2)/f;
-    }else{
-        return (x-f/2)/f;
-    }
-}
+#define add_floats(x, y) (x)+y
 
-static int add_floats(int x, int y){
-    return x+y;
-}
+#define sub_floats(x, y) (x) - y
 
-static int sub_floats(int x, int y){
-    return x - y;
-}
+#define add_float_and_int(x, n) (x) + int_to_float(n)
 
-static int add_float_and_int(int x, int n){
-    return x + int_to_float(n);
-}
+#define sub_float_and_int(x, n) (x) - int_to_float(n)
 
-static int sub_float_and_int(int x, int n){
-    return x - int_to_float(n);
-}
+#define multi_floats(x, y) ((int64_t)(x))*y/(f)
 
-static int multi_floats(int x, int y){
-    return ((int64_t)x)*y/f;
-}
+#define multi_float_and_int(x, n) (x)*(n)
 
-static int multi_float_and_int(int x, int n){
-    return x*n;
-}
+#define divide_floats(x, y) ((int64_t)(x))*(f)/y
 
-static int divide_floats(int x, int y){
-    return ((int64_t)x)*f/y;
-}
-
-static int divide_float_and_int(int x, int n){
-    return x/n;
-}
+#define divide_float_and_int(x, n) (x)/(n)
 
 #endif

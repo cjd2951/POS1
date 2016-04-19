@@ -201,16 +201,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
   if(thread_mlfqs) {
-    struct thread *t = thread_current();
-    int temp_recent_cpu = t->recent_cpu;
-    t->recent_cpu = add_floats(temp_recent_cpu, int_to_float(1));
-
-    if (timer_ticks() % TIMER_FREQ == 0) {
+    recent_cpu_increment();
+    if (ticks % TIMER_FREQ == 0) {
       calculate_load_average();
-      thread_foreach(calculate_recent_cpu, NULL);
+      calculate_recent_for_all();
     }
-    if (timer_ticks() % 4 == 0) {
-      recalculate_priority(t);
+    if (timer_ticks() % 4 == 3) {
+      recalc_current_prior();
     }
   }
 
