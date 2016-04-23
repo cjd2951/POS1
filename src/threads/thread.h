@@ -23,7 +23,9 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-#define PRI_NONE -1 
+#define PRI_NONE -1
+
+#define NICE_DEFAULT 0
 
 /* A kernel thread or user process.
 
@@ -89,11 +91,15 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
-    int priority_donated; 
+    int priority_donated;
     struct lock *wanting_lock;
     int sleep_ticks;
     struct list_elem sleepelem;
     struct list_elem allelem;           /* List element for all threads list. */
+    struct list_elem allelem;
+    int nice;
+    int recent_cpu;
+    /* List element for all threads list. */
 
     struct list_elem donate_elem;
     struct list donate_list;
@@ -124,7 +130,7 @@ void thread_print_stats (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
-void sleep_list_add (struct thread *);
+//void sleep_list_add (struct thread *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
@@ -151,5 +157,15 @@ int thread_get_highest_priority(struct thread *);
 void preempt_if_not_highest_pri (void);
 bool lesser_priority(const struct list_elem *, const struct list_elem *, void *) UNUSED;
 void thread_recall_previous_priority (struct thread *);
+
+void calculate_recent_cpu(struct thread *cur_thread, void *aux);
+void recalculate_priority(struct thread *cur_thread);
+void calculate_load_average(void);
+void recent_cpu_increment(void);
+void calculate_recent_for_all(void);
+void recalc_current_prior(void);
+
+/** NEW CODE **/
+bool sort_by_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 #endif /* threads/thread.h */

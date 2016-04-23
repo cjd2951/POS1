@@ -7,7 +7,9 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
-  
+#include "threads/fixed-point.h"
+
+
 /* See [8254] for hardware details of the 8254 timer chip. */
 /* TIMER_FREQ is set in the timer.h file */
 #if TIMER_FREQ < 19
@@ -30,6 +32,10 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+/* ADDED CODE HERE
+ * thread_sleep_list is the list of waiting threads */
+struct list thread_sleep_list;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 //add a comment for commit
@@ -38,6 +44,9 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+
+  /** ADDED CODE HERE **/
+  list_init(&thread_sleep_list); /* Initialize the sleep list */
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -90,34 +99,22 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
- 
-  /* Interrupts must be turned on, or this assert fails */
-  ASSERT (intr_get_level () == INTR_ON);
-  
-  /** Jed NEW CODE **/
-  // Make sure ticks is greater than 0
-  if (ticks <= 0){
-    return;
-  }
+  int64_t start = timer_ticks ();
+  /* this line grabs the number of ticks since the system booted */
 
-   // following convention
-   enum intr_level old_level = intr_disable();
-   
-   // grab the timer thread
-   struct thread *t = thread_current();
-   
-   // set sleep_ticks to ticks
-   t->sleep_ticks = ticks;
-   
-   // put this thread in the sleep list
-   sleep_list_add(t);
-   
-   // block this thread that was just put on the sleep list
-   thread_block();
-   
-   // reenable INTR level 
-   intr_set_level(old_level);
-  
+  ASSERT (intr_get_level () == INTR_ON);
+  /* Interrupts must be turned on, or this assert fails */
+
+  /** NEW CODE **/
+  enum intr_level old_level; /* following convention */
+  old_level = intr_disable(); /* save old INTR level, and disable INTR */
+  struct thread *cur = thread_current(); /** grab the timer thread **/
+  cur->wait_until_ticks = (start + ticks); /** Set the correct value for wait_until_ticks **/
+  /** Put this threads element into the thread_sleep_list **/
+  /** Lets use insertion "on the back" for ease. **/
+  list_push_back(&thread_sleep_list, &cur->sleeplistelem);
+  thread_block();  //block this thread that was just put on the thread_sleep_list
+  intr_set_level (old_level); /* reenable INTR level when we came in here */
 }
 
 
@@ -195,10 +192,37 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  ticks++;
-  thread_tick();
-}
+  struct list_elem *e;
+  struct thread *cur;
 
+
+
+  ASSERT (intr_get_level () == INTR_OFF);
+  ticks++;
+  thread_tick ();
+  if(thread_mlfqs) {
+    recent_cpu_increment();
+    if (ticks % TIMER_FREQ == 0) {
+      calculate_load_average();
+      calculate_recent_for_all();
+    }
+    if (timer_ticks() % 4 == 3) {
+      recalc_current_prior();
+    }
+  }
+
+  for (e = list_begin (&thread_sleep_list); e != list_end (&thread_sleep_list);
+       e = list_next (e))
+  {
+     cur = list_entry (e, struct thread, sleeplistelem);
+     if(cur->wait_until_ticks <= ticks){
+        list_remove(e);
+        thread_unblock(cur);
+     }
+  }
+
+
+}
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */

@@ -11,6 +11,9 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed-point.h"
+#include "thread.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -27,10 +30,6 @@ static struct list ready_list;
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
-
-// Jed new code
-// add a list struct sleep_list, used to hold sleeping threads
-static struct list sleep_list;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -83,6 +82,7 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+int load_average;
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -105,15 +105,13 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-  // Jed new code 
-  // initialize list sleep list calling list_init and passing the address of sleep_list
-  list_init(&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  load_average = 0;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -149,35 +147,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
-  // Jed new code
-  // decrement sleeping threads tick counts
-  // create a pointer to a list_elem struct
-  struct list_elem *e;
-  
-  // iterate through the sleep list
-  for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next (e)) {
-    
-    // create a struct thread pointer that points to the entry in the sleep list
-    struct thread *t = list_entry (e, struct thread, sleepelem);
-    
-    // decrement sleeping threads tick count
-    t->sleep_ticks--;
-  }
-
-  // wake up all threads that have slept long enough, put them on the ready list
-  // iterate through the sleep list
-  for (e = list_begin(&sleep_list); e != list_end(&sleep_list); e = list_next (e)) {
-     
-    // create a struct thread pointer that points to the entry in the sleep list
-    struct thread *t = list_entry (e, struct thread, sleepelem);
-       
-      // if the sleep ticks of the thread is equal to 0, unblock thread and remove from sleep list
-      if (t-> sleep_ticks == 0) {
-        thread_unblock(t);
-        list_remove(e);
-    }
-  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -246,6 +215,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if(thread_mlfqs){
+    recalculate_priority(t);
+  }
   // Jed new code
   // call to preempt_if_higher_pri
   preempt_if_higher_pri(t);
@@ -281,11 +253,11 @@ int thread_get_highest_priority (struct thread *t) {
 }
 
 // Jed new code
-// this method puts the current thread in the sleep 
+// this method puts the current thread in the sleep
 // list and sets the sleep ticks
-void sleep_list_add(struct thread *t) {
-  list_push_back(&sleep_list, &t->sleepelem);
-}
+//void sleep_list_add(struct thread *t) {
+//  list_push_back(&sleep_list, &t->sleepelem);
+//}
 
 /* Puts the current thread to sleep.  It will not be scheduled
    again until awoken by thread_unblock().
@@ -414,12 +386,15 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. 
+/* Sets the current thread's priority to NEW_PRIORITY.
 Sets the current thread’s priority to new priority. If the current thread no longer has
 the highest priority, yields. */
 void
 thread_set_priority (int new_priority) 
 {
+  if(thread_mlfqs){
+    return;
+  }
   thread_current ()->priority = new_priority;
   if (!is_highest_priority()) {
     thread_yield();
@@ -427,7 +402,7 @@ thread_set_priority (int new_priority)
 }
 
 // Jed new code
-// this method will retrun whether or not the currently 
+// this method will retrun whether or not the currently
 // running thread is still the highest priority
 static bool is_highest_priority() {
   struct list_elem *e = list_max(&ready_list, lesser_priority, NULL);
@@ -439,44 +414,99 @@ static bool is_highest_priority() {
 int
 thread_get_priority (void) 
 {
-    // Jed new code 
-    // return the highest priority 
-    return thread_get_highest_priority(thread_current());
-  
 
+  int temp_priority = thread_current ()->priority;
+  return temp_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED) 
+thread_set_nice (int new_nice)
 {
-  /* Not yet implemented. */
+  thread_current()->nice = new_nice;
+  calculate_recent_cpu(thread_current(),NULL);
+  recalculate_priority(thread_current());
+  struct thread *front = list_entry(list_begin(&ready_list), struct thread, elem);
+  if(!list_empty(&ready_list) && thread_current()->priority < front->priority){
+    thread_yield();
+  }
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  int temp_nice = thread_current()->nice;
+  return temp_nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  int temp_load_average = float_to_int_nearest_round(multi_float_and_int(load_average,100));
+  return temp_load_average;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  int temp_recent_cpu = float_to_int_nearest_round(multi_float_and_int(thread_current()->recent_cpu,100));
+  return temp_recent_cpu;
 }
 
+
+void calculate_recent_cpu(struct thread *cur_thread, void *aux UNUSED){
+  if(cur_thread == idle_thread){
+    return;
+  }
+  int partial1 = multi_float_and_int(load_average,2);
+  int partial2 = add_float_and_int(multi_float_and_int(load_average,2), 1);
+  int partial3 = divide_floats(partial1,partial2);
+  int cur_t_cpu = cur_thread->recent_cpu;
+  int partial4 = multi_floats(partial3,cur_t_cpu);
+  int cur_t_nice = cur_thread->nice;
+  int temp_recent_cpu = add_float_and_int(partial4,cur_t_nice);
+  cur_thread->recent_cpu = temp_recent_cpu;
+}
+
+void recalculate_priority(struct thread *cur_thread){
+  if(cur_thread == idle_thread){
+    return;
+  }
+  int temp_priority = PRI_MAX - float_to_int_nearest_round(divide_float_and_int(cur_thread->recent_cpu,4)) - (cur_thread->nice * 2);
+  cur_thread->priority = temp_priority;
+  if(cur_thread->priority < PRI_MIN){
+    cur_thread->priority = PRI_MIN;
+  }
+  if(cur_thread->priority > PRI_MAX){
+    cur_thread->priority = PRI_MAX;
+  }
+}
+
+void calculate_load_average(void){
+  int ready_list_size = list_size(&ready_list);
+  if(thread_current() != idle_thread){
+    ready_list_size++;
+  }
+  int first_frac = int_to_float(59)/60;
+  int second_frac = int_to_float(1)/60;
+  int temp_load_average = add_floats(multi_floats(first_frac,load_average),second_frac * ready_list_size);
+  load_average = temp_load_average;
+
+}
+
+void recent_cpu_increment(void){
+  thread_current()->recent_cpu = add_float_and_int(thread_current()->recent_cpu, 1);
+}
+void calculate_recent_for_all(void){
+  thread_foreach(calculate_recent_cpu, NULL);
+}
+void recalc_current_prior(void){
+  recalculate_priority(thread_current());
+}
+
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
@@ -563,11 +593,20 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
-  
+  if(thread_mlfqs){
+    t->nice = NICE_DEFAULT;
+    if(t == initial_thread){
+      t->recent_cpu = 0;
+    }else{
+      t->recent_cpu = thread_get_recent_cpu();
+      t->nice = thread_current()->nice;
+    }
+  }
+
   // Jed new code
   // start with priority donated as = -1
   t->priority_donated = PRI_NONE;
-  
+
   // set wanting_lock to NULL
   t->wanting_lock = NULL;
 
@@ -610,9 +649,6 @@ bool lesser_priority(const struct list_elem *a, const struct list_elem *b, void 
    empty.  (If the running thread can continue running, then it
    will be in the run queue.)  If the run queue is empty, return
    idle_thread. */
-
-
-// Jed new code
 static struct thread *
 next_thread_to_run (void) 
 {
@@ -624,6 +660,7 @@ next_thread_to_run (void)
   }
 
 }
+
 /* Completes a thread switch by activating the new thread's page
    tables, and, if the previous thread is dying, destroying it.
 
