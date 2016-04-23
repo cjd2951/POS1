@@ -23,6 +23,7 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
+#define PRI_NONE -1 
 
 /* A kernel thread or user process.
 
@@ -88,12 +89,14 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int priority_donated; 
+    struct lock *wanting_lock;
+    int sleep_ticks;
+    struct list_elem sleepelem;
     struct list_elem allelem;           /* List element for all threads list. */
 
-    /* NEW CODE */
-    struct list_elem sleeplistelem;	/* NEW CODE: List element for sleep list*/
-    int64_t wait_until_ticks;   	/* call thread_unblock when wait_until_ticks == ticks in timer.c */
-    int donated_priority;		/* This attribute will store the highest donated priority, so far */
+    struct list_elem donate_elem;
+    struct list donate_list;
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
@@ -121,6 +124,7 @@ void thread_print_stats (void);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
+void sleep_list_add (struct thread *);
 void thread_block (void);
 void thread_unblock (struct thread *);
 
@@ -143,9 +147,9 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
-/** NEW CODE **/
-/**list_less_func my_less_func (const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux);
-**/
+int thread_get_highest_priority(struct thread *);
+void preempt_if_not_highest_pri (void);
+bool lesser_priority(const struct list_elem *, const struct list_elem *, void *) UNUSED;
+void thread_recall_previous_priority (struct thread *);
+
 #endif /* threads/thread.h */
