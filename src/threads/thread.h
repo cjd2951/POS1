@@ -96,10 +96,11 @@ struct thread
     int sleep_ticks;
     struct list_elem sleepelem;
     struct list_elem allelem;           /* List element for all threads list. */
-    struct list_elem allelem;
     int nice;
     int recent_cpu;
     /* List element for all threads list. */
+    struct list_elem sleeplistelem;	/* NEW CODE: List element for sleep list*/
+    int64_t wait_until_ticks;
 
     struct list_elem donate_elem;
     struct list donate_list;
