@@ -414,9 +414,13 @@ static bool is_highest_priority() {
 int
 thread_get_priority (void) 
 {
+    // Jed new code
+    // return the highest priority
+    return thread_get_highest_priority(thread_current());
 
-  int temp_priority = thread_current ()->priority;
-  return temp_priority;
+//
+//  int temp_priority = thread_current ()->priority;
+//  return temp_priority;
 }
 
 /* Sets the current thread's nice value to NICE. */
